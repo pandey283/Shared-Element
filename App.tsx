@@ -1,118 +1,91 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import {View, Text, StatusBar, Alert, Platform} from 'react-native';
+import React, {createContext, useEffect, useState} from 'react';
+import Navigator from './src/Navigation';
+import axios from 'axios';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API} from './src/Constant/endPoint';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+  IContent,
+  IContentAPiResponse,
+  ITokenAPiResponse,
+} from './src/Screens/Home/type';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export const ApiContext = createContext({});
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+const App = () => {
+  const [data, setData] = useState<IContent>({});
+  useEffect(() => {
+    // For Android devices
+    if (Platform.OS === 'android') {
+      NetInfo.fetch().then(async isConnected => {
+        if (isConnected) {
+          const token = await AsyncStorage.getItem('token');
+          console.log('api token in async storage', token);
+          if (token && token !== null) {
+            getData();
+          } else {
+            getApiToken();
+          }
+        } else {
+          Alert.alert(
+            'Network Issue!',
+            'Please check your network connection',
+            [{text: 'OK', onPress: () => console.log('OK Pressed')}],
+          );
+        }
+      });
+    }
+  }, []);
+  const getApiToken = async () => {
+    try {
+      const response: ITokenAPiResponse = await axios({
+        method: 'post',
+        url: API.getToken,
+        data: {
+          email: 'gtak026@gmail.com',
+        },
+      });
+      console.log('token api res', response.data.token);
+      if (response.status === 200) {
+        await AsyncStorage.setItem('token', response.data?.token);
+      }
+    } catch (error) {
+      console.warn('token error', error);
+    }
   };
-
+  const getData = async () => {
+    const token: any = await AsyncStorage.getItem('token');
+    console.log('token-->>>>-', token);
+    try {
+      const response: IContentAPiResponse = await axios({
+        method: 'get',
+        url: API.getContent,
+        headers: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('get data from  api res', response.data.content);
+      if (response.status === 201) {
+        setData(response.data?.content);
+      }
+      // AsyncStorage.setItem('token', JSON.stringify(response));
+    } catch (error) {
+      console.warn('get data api error', error);
+    }
+  };
+  const fetchRandomContent = () => {
+    getData();
+  };
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <ApiContext.Provider value={{data, fetchRandomContent}}>
+      <View style={{flex: 1}}>
+        <StatusBar backgroundColor={'#fff'} barStyle={'light-content'} />
+        <Navigator />
+      </View>
+    </ApiContext.Provider>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
