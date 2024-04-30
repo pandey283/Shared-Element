@@ -11,6 +11,7 @@ import {
   ITokenAPiResponse,
 } from './src/Screens/Home/type';
 import {COLORS} from './src/Utils/Color';
+import {NetworkCheck} from './src/Utils/NetworkCheck';
 
 export const ApiContext = createContext({
   data: {
@@ -93,6 +94,7 @@ const App = () => {
       <View style={{flex: 1}}>
         <StatusBar backgroundColor={COLORS.white} barStyle={'light-content'} />
         <Navigator />
+        <NetworkCheck />
       </View>
     </ApiContext.Provider>
   );
