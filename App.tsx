@@ -10,8 +10,20 @@ import {
   IContentAPiResponse,
   ITokenAPiResponse,
 } from './src/Screens/Home/type';
+import {COLORS} from './src/Utils/Color';
 
-export const ApiContext = createContext({});
+export const ApiContext = createContext({
+  data: {
+    text: '',
+    logo: '',
+    mainImage: '',
+    subTitle: '',
+    thumbNailImage: '',
+    title: '',
+    userName: '',
+  },
+  fetchRandomContent: () => {},
+});
 
 const App = () => {
   const [data, setData] = useState<IContent>({});
@@ -21,7 +33,6 @@ const App = () => {
       NetInfo.fetch().then(async isConnected => {
         if (isConnected) {
           const token = await AsyncStorage.getItem('token');
-          console.log('api token in async storage', token);
           if (token && token !== null) {
             getData();
           } else {
@@ -46,9 +57,11 @@ const App = () => {
           email: 'gtak026@gmail.com',
         },
       });
-      console.log('token api res', response.data.token);
       if (response.status === 200) {
         await AsyncStorage.setItem('token', response.data?.token);
+        setTimeout(() => {
+          getData();
+        }, 40);
       }
     } catch (error) {
       console.warn('token error', error);
@@ -56,7 +69,6 @@ const App = () => {
   };
   const getData = async () => {
     const token: any = await AsyncStorage.getItem('token');
-    console.log('token-->>>>-', token);
     try {
       const response: IContentAPiResponse = await axios({
         method: 'get',
@@ -66,11 +78,9 @@ const App = () => {
           'Content-Type': 'application/json',
         },
       });
-      console.log('get data from  api res', response.data.content);
       if (response.status === 201) {
         setData(response.data?.content);
       }
-      // AsyncStorage.setItem('token', JSON.stringify(response));
     } catch (error) {
       console.warn('get data api error', error);
     }
@@ -81,7 +91,7 @@ const App = () => {
   return (
     <ApiContext.Provider value={{data, fetchRandomContent}}>
       <View style={{flex: 1}}>
-        <StatusBar backgroundColor={'#fff'} barStyle={'light-content'} />
+        <StatusBar backgroundColor={COLORS.white} barStyle={'light-content'} />
         <Navigator />
       </View>
     </ApiContext.Provider>
